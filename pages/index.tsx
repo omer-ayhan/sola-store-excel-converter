@@ -1,86 +1,103 @@
-import type { NextPage } from 'next'
-import Head from 'next/head'
-import Image from 'next/image'
+import React from "react";
+import axios from "axios";
+import type { NextPage } from "next";
+import * as XLSX from "xlsx";
 
-const Home: NextPage = () => {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center py-2">
-      <Head>
-        <title>Create Next App</title>
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
+import sources from "../sources";
+import Image from "next/image";
 
-      <main className="flex w-full flex-1 flex-col items-center justify-center px-20 text-center">
-        <h1 className="text-6xl font-bold">
-          Welcome to{' '}
-          <a className="text-blue-600" href="https://nextjs.org">
-            Next.js!
-          </a>
-        </h1>
+const Home: NextPage = ({ allProducts }: any) => {
+	const inputRef = React.useRef<HTMLInputElement>(null);
 
-        <p className="mt-3 text-2xl">
-          Get started by editing{' '}
-          <code className="rounded-md bg-gray-100 p-3 font-mono text-lg">
-            pages/index.tsx
-          </code>
-        </p>
+	const downloadExcel = (data: any, name?: string) => {
+		const worksheet = XLSX.utils.json_to_sheet(data);
+		const workbook = XLSX.utils.book_new();
+		const checkName = name ? name + ".xlsx" : "AllProducts.xlsx";
+		XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
+		//let buffer = XLSX.write(workbook, { bookType: "xlsx", type: "buffer" });
+		//XLSX.write(workbook, { bookType: "xlsx", type: "binary" });
+		XLSX.writeFile(workbook, checkName);
+	};
+	return (
+		<div className=" h-screen flex flex-col items-center justify-center gap-5">
+			<Image src="/placeholder.jpg" alt="Sola Store" width={150} height={150} />
+			<h1>Sola Store excel data for all products</h1>
+			<input
+				ref={inputRef}
+				className="shadow appearance-none border rounded w-72 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+				id="username"
+				type="text"
+				placeholder="Enter your file name here(optional)"
+			/>
+			<button
+				className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-10 rounded transition-colors duration-300 ease-in-out"
+				onClick={() => downloadExcel(allProducts, inputRef.current?.value)}>
+				Download File
+			</button>
+		</div>
+	);
+};
 
-        <div className="mt-6 flex max-w-4xl flex-wrap items-center justify-around sm:w-full">
-          <a
-            href="https://nextjs.org/docs"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Documentation &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Find in-depth information about Next.js features and its API.
-            </p>
-          </a>
+export default Home;
 
-          <a
-            href="https://nextjs.org/learn"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Learn &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Learn about Next.js in an interactive course with quizzes!
-            </p>
-          </a>
+type CatType = {
+	categoryID: number;
+	selectedCategoryName: string;
+	squareCategoryPictureID: number;
+	squareCategoryPictureGuidName: string;
+};
 
-          <a
-            href="https://github.com/vercel/next.js/tree/canary/examples"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Examples &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Discover and deploy boilerplate example Next.js projects.
-            </p>
-          </a>
+export async function getServerSideProps() {
+	const { get } = axios;
+	const { SOURCE_PROOF, API_URL } = process.env;
+	const { data: categories } = await get(
+		`${API_URL}/api/Category/GetAll?lang=tr&sourceProof=${SOURCE_PROOF}`
+	);
+	let allProducts: any = [];
+	await Promise.all(
+		categories.map(async (category: CatType) => {
+			const { data: products } = await get(
+				`${API_URL}/api/Product/GetAllByCategoryID?id=${category.categoryID}&lang=tr&sourceProof=${SOURCE_PROOF}`
+			);
+			allProducts.push(
+				...products.map(
+					({
+						masterProductID,
+						lastUpdateDate,
+						brandID,
+						productShortName,
+						productStockCode,
+						price,
+						oldPrice,
+						singlePrice,
+						picture_1,
+						picture_2,
+						picture_3,
+						video_1,
+						sizes,
+					}: any) => ({
+						masterProductID,
+						lastUpdateDate,
+						brandID,
+						productShortName,
+						productStockCode,
+						price,
+						oldPrice,
+						singlePrice,
+						picture_1: `${sources.imageMaxSrc}${picture_1}`,
+						picture_2: `${sources.imageMaxSrc}${picture_2}`,
+						picture_3: `${sources.imageMaxSrc}${picture_3}`,
+						video_1: `${sources.videos}${video_1}`,
+						sizes,
+					})
+				)
+			);
+		})
+	);
 
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Deploy &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
-      </main>
-
-      <footer className="flex h-24 w-full items-center justify-center border-t">
-        <a
-          className="flex items-center justify-center gap-2"
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <Image src="/vercel.svg" alt="Vercel Logo" width={72} height={16} />
-        </a>
-      </footer>
-    </div>
-  )
+	return {
+		props: {
+			allProducts,
+		},
+	};
 }
-
-export default Home
