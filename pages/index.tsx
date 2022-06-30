@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useEffect } from "react";
 import axios from "axios";
 import type { NextPage } from "next";
 import * as XLSX from "xlsx";
+import Convert from "xml-js";
+import fs from "fs";
 
 import sources from "../sources";
 import Image from "next/image";
@@ -18,6 +20,34 @@ const Home: NextPage = ({ allProducts }: any) => {
 		//XLSX.write(workbook, { bookType: "xlsx", type: "binary" });
 		XLSX.writeFile(workbook, checkName);
 	};
+
+	function addPrefix(name: any) {
+		if (Number(name) || Number(name) === 0) return "element";
+		return name;
+	}
+
+	const JsonToXML = async () => {
+		try {
+			const options = {
+				compact: true,
+				ignoreComment: true,
+				spaces: 4,
+				elementNameFn: addPrefix,
+			};
+			const result = Convert.js2xml(allProducts, options);
+			const url = window.URL.createObjectURL(
+				new Blob([result], { type: "text/xml" })
+			);
+			const link = document.createElement("a");
+			link.href = url;
+			link.setAttribute("download", "data.xml");
+			document.body.appendChild(link);
+			link.click();
+		} catch (error) {
+			console.log(error);
+		}
+	};
+
 	return (
 		<div className=" h-screen flex flex-col items-center justify-center gap-5">
 			<Image src="/placeholder.jpg" alt="Sola Store" width={150} height={150} />
@@ -32,7 +62,12 @@ const Home: NextPage = ({ allProducts }: any) => {
 			<button
 				className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-10 rounded transition-colors duration-300 ease-in-out"
 				onClick={() => downloadExcel(allProducts, inputRef.current?.value)}>
-				Download File
+				Download File in Excel Format
+			</button>
+			<button
+				className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-10 rounded transition-colors duration-300 ease-in-out"
+				onClick={JsonToXML}>
+				Download File in XML Format
 			</button>
 		</div>
 	);
